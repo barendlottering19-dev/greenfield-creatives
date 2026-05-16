@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Brief — GreenField Creatives</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <style>
+    :root {
+      --green: #00ff9f;
+      --green-dim: rgba(0, 255, 159, 0.6);
+      --green-glow: 0 0 40px rgba(0, 255, 159, 0.15);
+      --bg-deep: #080c08;
+      --bg-card: #0e140e;
+      --bg-surface: #141c14;
+      --bg-input: #1a241a;
+      --border: rgba(0, 255, 159, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-deep);
+      color: #f0f5f0;
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0, 255, 159, 0.04) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 50% at 80% 90%, rgba(0, 255, 159, 0.025) 0%, transparent 70%);
+      background-attachment: fixed;
+    }
+
+    .noise-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 256px 256px;
+    }
+
+    .form-container {
+      position: relative;
+      z-index: 2;
+    }
+
+    .glow-orb {
+      position: fixed;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(120px);
+      opacity: 0.08;
+      transition: transform 0.3s ease;
+    }
+    .glow-orb--1 { top: -200px; right: -150px; background: #00ff9f; }
+    .glow-orb--2 { bottom: -200px; left: -150px; background: #00ccff; }
+
+    .step-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--green-glow), 0 8px 32px rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    .step-card.exit { opacity: 0; transform: translateY(12px) scale(0.98); }
+    .step-card.enter { opacity: 1; transform: translateY(0) scale(1); }
+
+    .progress-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+      cursor: default;
+    }
+    .progress-circle {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600;
+      transition: all 0.4s ease;
+      position: relative;
+      flex-shrink: 0;
+      border: 2px solid rgba(255,255,255,0.08);
+      background: var(--bg-surface);
+      color: rgba(255,255,255,0.3);
+    }
+    .progress-circle.active {
+      border-color: var(--green);
+      background: rgba(0, 255, 159, 0.12);
+      color: var(--green);
+      box-shadow: 0 0 20px rgba(0, 255, 159, 0.15);
+    }
+    .progress-circle.done {
+      border-color: var(--green);
+      background: var(--green);
+      color: #080c08;
+    }
+    .progress-label {
+      font-size: 13px; font-weight: 500;
+      color: rgba(255,255,255,0.3);
+      transition: color 0.3s ease;
+      white-space: nowrap;
+    }
+    .progress-label.active { color: var(--green); }
+    .progress-label.done { color: rgba(255,255,255,0.5); }
+
+    .progress-line {
+      flex: 1;
+      height: 2px;
+      background: rgba(255,255,255,0.06);
+      position: relative;
+      margin: 0 4px;
+      min-width: 24px;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-line-fill {
+      position: absolute; inset: 0;
+      background: var(--green);
+      border-radius: 2px;
+      transition: width 0.5s ease;
+      width: 0%;
+      box-shadow: 0 0 8px rgba(0, 255, 159, 0.3);
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      color: #f0f5f0;
+      transition: all 0.25s ease;
+      outline: none;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    }
+    input::placeholder, textarea::placeholder {
+      color: rgba(255,255,255,0.2);
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(0, 255, 159, 0.08), inset 0 2px 4px rgba(0,0,0,0.2);
+    }
+    textarea { resize: vertical; min-height: 100px; }
+    select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2300ff9f' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
+
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 8px;
+    }
+    .checkbox-label {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px;
+      background: var(--bg-input);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      color: rgba(255,255,255,0.55);
+      user-select: none;
+    }
+    .checkbox-label:hover { border-color: rgba(0, 255, 159, 0.2); background: rgba(0, 255, 159, 0.03); }
+    .checkbox-label.checked { border-color: var(--green); background: rgba(0, 255, 159, 0.06); color: #f0f5f0; }
+    .checkbox-label input { display: none; }
+    .check-icon {
+      width: 20px; height: 20px; border-radius: 6px;
+      border: 2px solid rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+      font-size: 11px;
+      color: transparent;
+    }
+    .checkbox-label.checked .check-icon {
+      background: var(--green); border-color: var(--green);
+      color: #080c08;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #00ff9f, #00cc7a);
+      color: #080c08;
+      font-weight: 600;
+      font-size: 15px;
+      padding: 14px 32px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      letter-spacing: 0.01em;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0, 255, 159, 0.3);
+    }
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+    .btn-primary::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.2) 50%, transparent 60%);
+      transform: translateX(-100%);
+      transition: transform 0.6s ease;
+    }
+    .btn-primary:hover::after {
+      transform: translateX(100%);
+    }
+    .btn-primary:disabled {
+      opacity: 0.4; cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+    .btn-primary:disabled::after { display: none; }
+
+    .btn-ghost {
+      background: transparent;
+      color: rgba(255,255,255,0.5);
+      font-weight: 500;
+      font-size: 14px;
+      padding: 12px 24px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.06);
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .btn-ghost:hover {
+      border-color: rgba(255,255,255,0.15);
+      color: #f0f5f0;
+      background: rgba(255,255,255,0.03);
+    }
+
+    .success-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(8, 12, 8, 0.92);
+      backdrop-filter: blur(12px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.5s ease;
+    }
+    .success-overlay.show { opacity: 1; pointer-events: all; }
+
+    .success-card {
+      text-align: center;
+      max-width: 480px;
+      padding: 60px 40px;
+      animation: successPop 0.6s ease forwards;
+    }
+    @keyframes successPop {
+      0% { transform: scale(0.92) translateY(20px); opacity: 0; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    .success-icon {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00ff9f, #00cc7a);
+      margin: 0 auto 28px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+      color: #080c08;
+      box-shadow: 0 0 60px rgba(0, 255, 159, 0.2);
+    }
+
+    /* Responsive progress */
+    @media (max-width: 768px) {
+      .progress-label { display: none; }
+      .progress-line { min-width: 16px; }
+      .progress-circle { width: 32px; height: 32px; font-size: 12px; }
+      .checkbox-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+      .step-card { border-radius: 16px; padding: 24px !important; }
+      .success-card { padding: 40px 24px; margin: 0 16px; }
+    }
+    @media (max-width: 480px) {
+      .checkbox-grid { grid-template-columns: 1fr 1fr; }
+      .btn-primary, .btn-ghost { width: 100%; justify-content: center; }
+    }
+
+    .input-error {
+      border-color: #ff4d4d !important;
+      box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.08) !important;
+    }
+    .error-text { color: #ff6b6b; font-size: 12px; margin-top: 4px; display: none; }
+
+    .floating-label {
+      position: relative;
+    }
+
+    .save-toast {
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(80px);
+      z-index: 50;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      box-shadow: var(--green-glow), 0 4px 24px rgba(0,0,0,0.4);
+      padding: 14px 28px;
+      border-radius: 14px;
+      font-size: 14px;
+      color: var(--green);
+      opacity: 0; pointer-events: none;
+      transition: all 0.4s ease;
+      backdrop-filter: blur(8px);
+    }
+    .save-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+  <div class="noise-overlay"></div>
+  <div class="glow-orb glow-orb--1"></div>
+  <div class="glow-orb glow-orb--2"></div>
+
+  <div class="save-toast" id="saveToast">Progress saved</div>
+
+  <!-- SUCCESS OVERLAY -->
+  <div class="success-overlay" id="successOverlay">
+    <div class="success-card step-card" style="background:var(--bg-card);border:1px solid var(--border);border-radius:24px;">
+      <div class="success-icon">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h2 class="text-2xl font-bold text-white mb-3">Project Brief Submitted</h2>
+      <p class="text-[#a0b0a0] mb-8 leading-relaxed text-sm">
+        Thanks for reaching out. Our team will review your project and get back to you within 24 hours with a custom proposal.
+      </p>
+      <button onclick="resetForm()" class="btn-primary inline-flex items-center gap-2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Submit Another Brief
+      </button>
+    </div>
+  </div>
+
+  <div class="form-container max-w-3xl mx-auto px-4 py-12 sm:py-20">
+    <!-- HEADER -->
+    <div class="text-center mb-12">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[rgba(0,255,159,0.12)] bg-[rgba(0,255,159,0.04)] text-[var(--green)] text-xs font-medium tracking-wider uppercase mb-6">
+        <span class="w-1.5 h-1.5 rounded-full bg-[var(--green)]"></span>
+        Start Your Project
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">
+        Project Brief
+      </h1>
+      <p class="text-[#809080] mt-3 text-sm max-w-md mx-auto leading-relaxed">
+        Tell us about your vision. Every great website starts with a conversation.
+      </p>
+    </div>
+
+    <!-- PROGRESS BAR -->
+    <div class="flex items-center justify-center gap-0 mb-10 overflow-x-auto pb-2" id="progressBar">
+      <!-- injected by JS -->
+    </div>
+
+    <!-- FORM -->
+    <form id="intakeForm" novalidate>
+      <!-- STEP 1: Contact -->
+      <div class="step-card p-6 sm:p-10 step" data-step="1">
+        <div class="flex items-center gap-3 mb-8">
+          <span class="text-[var(--green)] text-xs font-semibold tracking-widest uppercase">Step 1 of 6</span>
+          <span class="w-px h-4 bg-[rgba(255,255,255,0.06)]"></span>
+          <span class="text-white font-semibold text-lg">Contact Information</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
+            <label for="fullName">Full Name <span class="text-[var(--green)]">*</span></label>
+            <input type="text" id="fullName" name="fullName" placeholder="e.g. Sarah Chen" required />
+            <div class="error-text" data-for="fullName">Please enter your name</div>
+          </div>
+          <div>
+            <label for="email">Email Address <span class="text-[var(--green)]">*</span></label>
+            <input type="email" id="email" name="email" placeholder="sarah@company.com" required />
+            <div class="error-text" data-for="email">Please enter a valid email</div>
+          </div>
+          <div>
+            <label for="company">Company Name</label>
+            <input type="text" id="company" name="company" placeholder="e.g. Acme Inc." />
+          </div>
+          <div>
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone" placeholder="e.g. +1 (555) 000-0000" />
+          </div>
+          <div class="sm:col-span-2">
+            <label for="website">Current Website (if any)</label>
+            <input type="url" id="website" name="website" placeholder="https://yoursite.com" />
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Project Overview -->
+      <div class="step-card p-6 sm:p-10 step hidden" data-step="2">
+        <div class="flex items-center gap-3 mb-8">
+          <span class="text-[var(--green)] text-xs font-semibold tracking-widest uppercase">Step 2 of 6</span>
+          <span class="w-px h-4 bg-[rgba(255,255,255,0.06)]"></span>
+          <span class="text-white font-semibold text-lg">Project Overview</span>
+        </div>
+        <div class="space-y-5">
+          <div>
+            <label for="goal">What is the main goal of your new website? <span class="text-[var(--green)]">*</span></label>
+            <textarea id="goal" name="goal" rows="3" placeholder="e.g. We need a modern e-commerce platform to sell our products directly to customers and showcase our brand story..." required></textarea>
+            <div class="error-text" data-for="goal">Please describe your project goal</div>
+          </div>
+          <div>
+            <label for="projectType">Project Type <span class="text-[var(--green)]">*</span></label>
+            <select id="projectType" name="projectType" required>
+              <option value="">Select project type</option>
+              <option value="new-website">New Website</option>
+              <option value="redesign">Redesign</option>
+              <option value="web-application">Web Application</option>
+              <option value="ecommerce">E-commerce</option>
+              <option value="landing-page">Landing Page</option>
+              <option value="other">Other</option>
+            </select>
+            <div class="error-text" data-for="projectType">Please select a project type</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Design Preferences -->
+      <div class="step-card p-6 sm:p-10 step hidden" data-step="3">
+        <div class="flex items-center gap-3 mb-8">
+          <span class="text-[var(--green)] text-xs font-semibold tracking-widest uppercase">Step 3 of 6</span>
+          <span class="w-px h-4 bg-[rgba(255,255,255,0.06)]"></span>
+          <span class="text-white font-semibold text-lg">Design Preferences</span>
+        </div>
+        <div class="space-y-5">
+          <div>
+            <label for="lookFeel">Describe the desired look &amp; feel</label>
+            <input type="text" id="lookFeel" name="lookFeel" placeholder="e.g. Modern, minimalist, bold, luxury, corporate, playful, etc." />
+          </div>
+          <div>
+            <label for="colorPalette">Preferred color palette</label>
+            <input type="text" id="colorPalette" name="colorPalette" placeholder="e.g. Navy &amp; gold, monochrome, earth tones, pastels..." />
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label for="websitesLike">Websites you like (links)</label>
+              <textarea id="websitesLike" name="websitesLike" rows="2" placeholder="https://... (one per line)"></textarea>
+            </div>
+            <div>
+              <label for="websitesDislike">Websites you dislike?</label>
+              <textarea id="websitesDislike" name="websitesDislike" rows="2" placeholder="https://... (one per line)"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: Target Audience & Features -->
+      <div class="step-card p-6 sm:p-10 step hidden" data-step="4">
+        <div class="flex items-center gap-3 mb-8">
+          <span class="text-[var(--green)] text-xs font-semibold tracking-widest uppercase">Step 4 of 6</span>
+          <span class="w-px h-4 bg-[rgba(255,255,255,0.06)]"></span>
+          <span class="text-white font-semibold text-lg">Audience &amp; Features</span>
+        </div>
+        <div class="space-y-6">
+          <div>
+            <label for="targetAudience">Who is your ideal customer? (age, location, profession, interests, etc.)</label>
+            <textarea id="targetAudience" name="targetAudience" rows="2" placeholder="e.g. Professionals aged 25–45 in the US, tech-savvy, interested in sustainable products..."></textarea>
+          </div>
+          <div>
+            <label>Must-have features</label>
+            <div class="checkbox-grid" id="featuresGrid">
+              <label class="checkbox-label" data-value="Contact Form">
+                <span class="check-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <input type="checkbox" name="features" value="Contact Form" />
+                Contact Form
+              </label>
+              <label class="checkbox-label" data-value="Booking System">
+                <span class="check-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <input type="checkbox" name="features" value="Booking System" />
+                Booking System
+              </label>
+              <label class="checkbox-label" data-value="Online Store">
+                <span class="check-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <input type="checkbox" name="features" value="Online Store" />
+                Online Store
+              </label>
+              <label class="checkbox-label" data-value="Blog / CMS">
+                <span class="check-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <input type="checkbox" name="features" value="Blog / CMS" />
+                Blog / CMS
+              </label>
+              <label class="checkbox-label" data-value="User Login / Accounts">
+                <span class="check-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <input type="checkbox" name="features" value="User Login / Accounts" />
+                User Login / Accounts
+              </label>
+              <label class="checkbox-label" data-value="Dashboard / Admin Panel">
+                <span class="check-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <input type="checkbox" name="features" value="Dashboard / Admin Panel" />
+                Dashboard / Admin Panel
+              </label>
+              <label class="checkbox-label" data-value="Payment Integration">
+                <span class="check-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <input type="checkbox" name="features" value="Payment Integration" />
+                Payment Integration
+              </label>
+              <label class="checkbox-label" data-value="SEO Optimization">
+                <span class="check-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <input type="checkbox" name="features" value="SEO Optimization" />
+                SEO Optimization
+              </label>
+              <label class="checkbox-label" data-value="Analytics / Tracking">
+                <span class="check-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <input type="checkbox" name="features" value="Analytics / Tracking" />
+                Analytics / Tracking
+              </label>
+              <label class="checkbox-label" data-value="Multilingual Support">
+                <span class="check-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <input type="checkbox" name="features" value="Multilingual Support" />
+                Multilingual Support
+              </label>
+              <label class="checkbox-label" data-value="API Integrations">
+                <span class="check-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <input type="checkbox" name="features" value="API Integrations" />
+                API Integrations
+              </label>
+              <label class="checkbox-label" data-value="Newsletter / Email">
+                <span class="check-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <input type="checkbox" name="features" value="Newsletter / Email" />
+                Newsletter / Email
+              </label>
+            </div>
+            <div class="mt-3">
+              <input type="text" id="otherFeatures" placeholder="Other features (comma-separated)" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5: Content, Timeline & Budget -->
+      <div class="step-card p-6 sm:p-10 step hidden" data-step="5">
+        <div class="flex items-center gap-3 mb-8">
+          <span class="text-[var(--green)] text-xs font-semibold tracking-widest uppercase">Step 5 of 6</span>
+          <span class="w-px h-4 bg-[rgba(255,255,255,0.06)]"></span>
+          <span class="text-white font-semibold text-lg">Content, Timeline &amp; Budget</span>
+        </div>
+        <div class="space-y-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label for="pageCount">Approximate number of pages</label>
+              <select id="pageCount" name="pageCount">
+                <option value="">Select</option>
+                <option value="1-5">1–5 pages</option>
+                <option value="5-10">5–10 pages</option>
+                <option value="10-20">10–20 pages</option>
+                <option value="20+">20+ pages</option>
+                <option value="not-sure">Not sure yet</option>
+              </select>
+            </div>
+            <div>
+              <label for="hasAssets">Do you have existing content / logos / branding?</label>
+              <select id="hasAssets" name="hasAssets">
+                <option value="">Select</option>
+                <option value="yes">Yes, we have everything ready</option>
+                <option value="partial">Partially — some assets available</option>
+                <option value="no">No, we need help with branding</option>
+                <option value="not-sure">Not sure yet</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label for="timeline">When do you need it launched? <span class="text-[var(--green)]">*</span></label>
+              <select id="timeline" name="timeline" required>
+                <option value="">Select timeline</option>
+                <option value="asap">ASAP — within 2 weeks</option>
+                <option value="1-month">Within 1 month</option>
+                <option value="2-3-months">2–3 months</option>
+                <option value="3-6-months">3–6 months</option>
+                <option value="flexible">Flexible — no rush</option>
+              </select>
+              <div class="error-text" data-for="timeline">Please select a timeline</div>
+            </div>
+            <div>
+              <label for="budget">Approximate budget range <span class="text-[var(--green)]">*</span></label>
+              <select id="budget" name="budget" required>
+                <option value="">Select budget range</option>
+                <option value="under-5k">Under $5,000</option>
+                <option value="5k-10k">$5,000 – $10,000</option>
+                <option value="10k-25k">$10,000 – $25,000</option>
+                <option value="25k-50k">$25,000 – $50,000</option>
+                <option value="50k+">$50,000+</option>
+                <option value="not-sure">Not sure yet</option>
+              </select>
+              <div class="error-text" data-for="budget">Please select a budget range</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 6: Additional Info & Submit -->
+      <div class="step-card p-6 sm:p-10 step hidden" data-step="6">
+        <div class="flex items-center gap-3 mb-8">
+          <span class="text-[var(--green)] text-xs font-semibold tracking-widest uppercase">Step 6 of 6</span>
+          <span class="w-px h-4 bg-[rgba(255,255,255,0.06)]"></span>
+          <span class="text-white font-semibold text-lg">Final Details</span>
+        </div>
+        <div class="space-y-5">
+          <div>
+            <label for="additional">Anything else we should know?</label>
+            <textarea id="additional" name="additional" rows="4" placeholder="Share any other details, specific requirements, references, or questions..."></textarea>
+          </div>
+          <div class="bg-[var(--bg-input)] border border-[rgba(255,255,255,0.04)] rounded-xl p-5 text-sm text-[#809080] leading-relaxed">
+            <p class="font-medium text-white mb-1">Before you submit</p>
+            <p>We'll review your brief within 24 hours and reach out to schedule a discovery call. All information is kept confidential.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- NAVIGATION BUTTONS -->
+      <div class="flex items-center justify-between mt-6 gap-4 flex-wrap" id="navButtons">
+        <button type="button" class="btn-ghost flex items-center gap-2" id="prevBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+          Back
+        </button>
+        <div class="flex items-center gap-3 ml-auto">
+          <button type="button" class="btn-ghost text-xs flex items-center gap-1.5" id="saveBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save Progress
+          </button>
+          <button type="button" class="btn-primary flex items-center gap-2" id="nextBtn">
+            Continue
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+          </button>
+          <button type="submit" class="btn-primary hidden items-center gap-2" id="submitBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            Submit Project Brief
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // ── EmailJS config ──────────────────────────────────────────
+    // Replace these with your own values from https://emailjs.com
+    const EMAILJS_CONFIG = {
+      publicKey: 'lCL-G9uEJSd0L4u8wfW83',    // from EmailJS Account > API Keys
+      serviceID: 'service_1y6f6sg',    // from EmailJS > Email Services
+      templateID: 'template_z6z29ap',  // from EmailJS > Email Templates
+    };
+    emailjs.init(EMAILJS_CONFIG.publicKey);
+    // ────────────────────────────────────────────────────────────
+
+    const STORAGE_KEY = 'gfc_project_brief';
+    const steps = document.querySelectorAll('.step');
+    const progressBar = document.getElementById('progressBar');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const form = document.getElementById('intakeForm');
+    const saveToast = document.getElementById('saveToast');
+    const successOverlay = document.getElementById('successOverlay');
+
+    const stepLabels = ['Contact', 'Overview', 'Design', 'Audience & Features', 'Timeline & Budget', 'Review'];
+    let currentStep = 1;
+
+    function buildProgress() {
+      progressBar.innerHTML = '';
+      stepLabels.forEach((label, i) => {
+        const num = i + 1;
+        if (i > 0) {
+          const line = document.createElement('div');
+          line.className = 'progress-line';
+          line.innerHTML = `<div class="progress-line-fill" id="progressFill_${i}"></div>`;
+          progressBar.appendChild(line);
+        }
+        const step = document.createElement('div');
+        step.className = 'progress-step';
+        step.innerHTML = `
+          <div class="progress-circle" id="circle_${num}">${num}</div>
+          <span class="progress-label" id="label_${num}">${label}</span>
+        `;
+        progressBar.appendChild(step);
+      });
+    }
+    buildProgress();
+
+    function updateProgress() {
+      for (let i = 1; i <= stepLabels.length; i++) {
+        const circle = document.getElementById(`circle_${i}`);
+        const label = document.getElementById(`label_${i}`);
+        circle.classList.remove('active', 'done');
+        label.classList.remove('active', 'done');
+        if (i === currentStep) {
+          circle.classList.add('active');
+          label.classList.add('active');
+        } else if (i < currentStep) {
+          circle.classList.add('done');
+          circle.textContent = '✓';
+          label.classList.add('done');
+        } else {
+          circle.textContent = i;
+        }
+        // reset non-done numbers
+        if (i >= currentStep && i !== currentStep) {
+          circle.textContent = i;
+        }
+      }
+      for (let i = 1; i < stepLabels.length; i++) {
+        const fill = document.getElementById(`progressFill_${i}`);
+        if (fill) {
+          fill.style.width = i < currentStep ? '100%' : '0%';
+        }
+      }
+    }
+
+    function showStep(step) {
+      steps.forEach(s => {
+        s.classList.add('hidden');
+        s.classList.remove('enter', 'exit');
+      });
+      const current = document.querySelector(`.step[data-step="${step}"]`);
+      if (current) {
+        current.classList.remove('hidden');
+        current.classList.add('enter');
+      }
+      currentStep = step;
+      updateProgress();
+
+      const isLast = step === stepLabels.length;
+      nextBtn.classList.toggle('hidden', isLast);
+      submitBtn.classList.toggle('hidden', !isLast);
+      prevBtn.style.visibility = step === 1 ? 'hidden' : 'visible';
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function validateStep(step) {
+      const current = document.querySelector(`.step[data-step="${step}"]`);
+      const required = current.querySelectorAll('[required]');
+      let valid = true;
+      required.forEach(el => {
+        const err = current.querySelector(`.error-text[data-for="${el.id}"]`);
+        el.classList.remove('input-error');
+        if (err) err.style.display = 'none';
+        if (!el.value.trim()) {
+          valid = false;
+          el.classList.add('input-error');
+          if (err) err.style.display = 'block';
+        }
+        if (el.type === 'email' && el.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value.trim())) {
+          valid = false;
+          el.classList.add('input-error');
+          if (err) { err.textContent = 'Please enter a valid email'; err.style.display = 'block'; }
+        }
+      });
+      return valid;
+    }
+
+    function collectFormData() {
+      const data = { features: [] };
+      const fields = form.querySelectorAll('input:not([type="checkbox"]), textarea, select');
+      fields.forEach(el => {
+        if (el.name && el.id !== 'otherFeatures') {
+          data[el.name] = el.value;
+        }
+      });
+      form.querySelectorAll('input[type="checkbox"]:checked').forEach(el => {
+        data.features.push(el.value);
+      });
+      const other = document.getElementById('otherFeatures');
+      if (other && other.value.trim()) {
+        data.features.push(other.value.trim());
+      }
+      return data;
+    }
+
+    nextBtn.addEventListener('click', () => {
+      if (validateStep(currentStep)) {
+        showStep(currentStep + 1);
+      }
+    });
+
+    prevBtn.addEventListener('click', () => {
+      if (currentStep > 1) showStep(currentStep - 1);
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!validateStep(currentStep)) return;
+
+      const data = collectFormData();
+      const btn = submitBtn;
+      const origHTML = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="31.4 31.4" opacity=".3"/><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="31.4 31.4" stroke-dashoffset="-10" opacity="1"/></svg> Sending…`;
+
+      try {
+        await emailjs.send(EMAILJS_CONFIG.serviceID, EMAILJS_CONFIG.templateID, {
+          from_name: data.fullName || 'Not provided',
+          from_email: data.email || 'Not provided',
+          company: data.company || 'Not provided',
+          phone: data.phone || 'Not provided',
+          website: data.website || 'Not provided',
+          goal: data.goal || 'Not provided',
+          project_type: data.projectType || 'Not provided',
+          look_feel: data.lookFeel || 'Not provided',
+          color_palette: data.colorPalette || 'Not provided',
+          websites_like: data.websitesLike || 'Not provided',
+          websites_dislike: data.websitesDislike || 'Not provided',
+          target_audience: data.targetAudience || 'Not provided',
+          features: data.features.length ? data.features.join(', ') : 'None selected',
+          page_count: data.pageCount || 'Not provided',
+          has_assets: data.hasAssets || 'Not provided',
+          timeline: data.timeline || 'Not provided',
+          budget: data.budget || 'Not provided',
+          additional: data.additional || 'Not provided',
+        });
+
+        localStorage.removeItem(STORAGE_KEY);
+        successOverlay.classList.add('show');
+      } catch (err) {
+        console.error('EmailJS error:', err);
+        saveToast.textContent = 'Failed to send. Please try again or email us directly.';
+        saveToast.style.color = '#ff6b6b';
+        saveToast.classList.add('show');
+        setTimeout(() => {
+          saveToast.classList.remove('show');
+          saveToast.style.color = '';
+          saveToast.textContent = 'Progress saved';
+        }, 4000);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origHTML;
+      }
+    });
+
+    // Save Progress
+    saveBtn.addEventListener('click', () => {
+      const data = collectFormData();
+      data._savedStep = currentStep;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      saveToast.classList.add('show');
+      setTimeout(() => saveToast.classList.remove('show'), 2500);
+    });
+
+    function restoreProgress() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+      try {
+        const data = JSON.parse(saved);
+        Object.keys(data).forEach(key => {
+          if (key === 'features' || key === '_savedStep') return;
+          const el = form.querySelector(`[name="${key}"]`);
+          if (el) el.value = data[key];
+        });
+        if (data.features && data.features.length) {
+          form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            if (data.features.includes(cb.value)) {
+              cb.checked = true;
+              cb.closest('.checkbox-label')?.classList.add('checked');
+            }
+          });
+          if (data.features.length) {
+            const otherFeatures = document.getElementById('otherFeatures');
+            const known = ['Contact Form','Booking System','Online Store','Blog / CMS','User Login / Accounts','Dashboard / Admin Panel','Payment Integration','SEO Optimization','Analytics / Tracking','Multilingual Support','API Integrations','Newsletter / Email'];
+            const others = data.features.filter(f => !known.includes(f));
+            if (others.length && otherFeatures) {
+              otherFeatures.value = others.join(', ');
+            }
+          }
+        }
+        if (data._savedStep && data._savedStep >= 1 && data._savedStep <= stepLabels.length) {
+          showStep(data._savedStep);
+        }
+      } catch(e) {}
+    }
+
+    window.resetForm = function() {
+      form.reset();
+      form.querySelectorAll('.checkbox-label').forEach(l => l.classList.remove('checked'));
+      form.querySelectorAll('.error-text').forEach(e => e.style.display = 'none');
+      form.querySelectorAll('.input-error').forEach(e => e.classList.remove('input-error'));
+      successOverlay.classList.remove('show');
+      showStep(1);
+    };
+
+    // Checkbox toggle
+    document.querySelectorAll('.checkbox-label input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', function() {
+        this.closest('.checkbox-label').classList.toggle('checked', this.checked);
+      });
+    });
+
+    // Highlight already checked on load
+    document.querySelectorAll('.checkbox-label input[type="checkbox"]:checked').forEach(cb => {
+      cb.closest('.checkbox-label').classList.add('checked');
+    });
+
+    // Enter key advances step
+    form.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        if (!submitBtn.classList.contains('hidden')) {
+          form.dispatchEvent(new Event('submit'));
+        } else if (!nextBtn.classList.contains('hidden') && !nextBtn.disabled) {
+          nextBtn.click();
+        }
+      }
+    });
+
+    restoreProgress();
+    if (currentStep === 1) showStep(1);
+    prevBtn.style.visibility = 'hidden';
+
+    console.log('%c GreenField Creatives %c Project Brief Form ',
+      'background:#00ff9f;color:#080c08;font-weight:700;padding:4px 8px;border-radius:4px 0 0 4px;',
+      'background:#080c08;color:#00ff9f;padding:4px 8px;border-radius:0 4px 4px 0;');
+  </script>
+</body>
+</html>

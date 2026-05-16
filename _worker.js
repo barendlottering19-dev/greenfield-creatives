@@ -1,5 +1,15 @@
 const TELEGRAM_API = 'https://api.telegram.org/bot';
 
+const SECURITY_HEADERS = {
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
+};
+
+const CACHE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.svg', '.webp'];
+const CACHE_DURATION = 31536000;
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -65,6 +75,22 @@ export default {
       }
     }
 
-    return env.ASSETS.fetch(request);
+    const response = await env.ASSETS.fetch(request);
+    const newHeaders = new Headers(response.headers);
+
+    Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
+      newHeaders.set(key, value);
+    });
+
+    const ext = url.pathname.match(/\.(\w+)$/)?.[0];
+    if (ext && CACHE_EXTENSIONS.includes(ext)) {
+      newHeaders.set('Cache-Control', `public, max-age=${CACHE_DURATION}, immutable`);
+    }
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: newHeaders
+    });
   }
 };

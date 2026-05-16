@@ -30,7 +30,12 @@ export default {
         const chatId = env.TELEGRAM_CHAT_ID;
 
         if (!token || !chatId) {
-          return new Response(JSON.stringify({ error: 'Telegram not configured' }), {
+          return new Response(JSON.stringify({
+            error: 'Telegram not configured',
+            hasToken: !!token,
+            hasChatId: !!chatId,
+            envKeys: Object.keys(env)
+          }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
           });

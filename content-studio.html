@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Content Studio — GreenField Creatives</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root { --green: #84cc16; --green-dim: rgba(132,204,22,0.6); --green-glow: 0 0 40px rgba(132,204,22,0.12); --bg-deep: #050a08; --bg-card: #0a100e; --bg-surface: #0f1814; --bg-input: #16201a; --border: rgba(132,204,22,0.1); }
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg-deep); color: #e2e8f0; min-height: 100vh; }
+    .glass-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 1rem; transition: all 0.3s ease; }
+    .glass-card:hover { border-color: rgba(132,204,22,0.2); }
+    .btn-primary { background: var(--green); color: #000; font-weight: 600; padding: 0.625rem 1.5rem; border-radius: 0.75rem; border: none; cursor: pointer; transition: all 0.25s ease; font-size: 0.875rem; }
+    .btn-primary:hover { background: #a3e635; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(132,204,22,0.25); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+    .btn-ghost { background: transparent; color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.06); padding: 0.625rem 1.5rem; border-radius: 0.75rem; cursor: pointer; transition: all 0.25s ease; font-size: 0.875rem; }
+    .btn-ghost:hover { border-color: rgba(255,255,255,0.15); color: #e2e8f0; }
+    .btn-secondary { background: rgba(132,204,22,0.1); color: var(--green); border: 1px solid rgba(132,204,22,0.2); padding: 0.625rem 1.5rem; border-radius: 0.75rem; cursor: pointer; transition: all 0.25s ease; font-size: 0.875rem; font-weight: 600; }
+    .btn-secondary:hover { background: rgba(132,204,22,0.18); border-color: rgba(132,204,22,0.3); }
+    .badge { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+    .project-card { background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.04); border-radius: 0.75rem; overflow: hidden; transition: all 0.3s ease; cursor: pointer; }
+    .project-card:hover { border-color: rgba(132,204,22,0.15); }
+    .project-card.selected { border-color: var(--green); box-shadow: 0 0 0 1px var(--green), 0 4px 20px rgba(132,204,22,0.08); }
+    .project-card img { width: 100%; aspect-ratio: 16/10; object-fit: cover; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .result-card { background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.04); border-radius: 0.75rem; overflow: hidden; }
+    .method-tab { padding: 0.625rem 1.25rem; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s ease; font-size: 0.8125rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; background: transparent; color: rgba(255,255,255,0.3); border: 1px solid transparent; }
+    .method-tab:hover { color: rgba(255,255,255,0.5); }
+    .method-tab.active { background: rgba(132,204,22,0.08); color: var(--green); border-color: rgba(132,204,22,0.2); }
+    .platform-toggle { padding: 0.5rem 1rem; border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.06); cursor: pointer; transition: all 0.2s ease; font-size: 0.8125rem; display: flex; align-items: center; gap: 0.5rem; background: transparent; color: rgba(255,255,255,0.4); }
+    .platform-toggle.active { border-color: var(--green); background: rgba(132,204,22,0.06); color: var(--green); }
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px); z-index: 50; background: var(--bg-card); border: 1px solid var(--border); box-shadow: var(--green-glow), 0 4px 24px rgba(0,0,0,0.4); padding: 0.75rem 1.5rem; border-radius: 0.75rem; font-size: 0.875rem; color: var(--green); opacity: 0; pointer-events: none; transition: all 0.4s ease; backdrop-filter: blur(8px); }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { color: #ef4444; }
+    .svg-preview { width: 100%; border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.05); }
+    @media (max-width: 640px) { .projects-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <div class="toast" id="toast"></div>
+
+  <header class="border-b border-white/5 bg-black/60 backdrop-blur-xl sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3">
+        <img src="logo.png" alt="GreenField Creatives" class="h-7 w-auto" />
+        <span class="text-sm font-bold tracking-tight hidden sm:inline">GREENFIELD <span class="text-[var(--green)] font-light">CREATIVES</span></span>
+      </a>
+      <div class="flex items-center gap-4">
+        <span class="text-[10px] uppercase tracking-widest text-gray-500 font-semibold">Content Studio</span>
+        <a href="/" class="text-xs text-gray-500 hover:text-white transition">Back to Site</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+
+    <!-- ── Method Tabs ── -->
+    <div class="glass-card p-6 sm:p-8 mb-8">
+      <div class="flex items-center gap-3 mb-6">
+        <button class="method-tab active" data-method="svg">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Instant SVG
+        </button>
+        <button class="method-tab" data-method="canva">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7.5 12h9"/><path d="M12 7.5v9"/></svg>
+          Canva Design
+        </button>
+        <div class="flex-1"></div>
+        <div id="canva-conn-status" class="hidden">
+          <span class="w-2 h-2 rounded-full bg-gray-600 inline-block mr-1.5"></span>
+          <span class="text-xs text-gray-500">Canva: <span id="conn-text">checking...</span></span>
+        </div>
+      </div>
+
+      <!-- ── Method info ── -->
+      <div class="mb-6 text-sm text-gray-500">
+        <p id="method-info"><span class="text-[var(--green)] font-semibold">Instant SVG</span> — Generates a styled SVG graphic instantly. No account needed, no API keys. Download and use directly.</p>
+      </div>
+
+      <!-- ── Platform Toggles ── -->
+      <div class="flex flex-wrap gap-2 mb-6">
+        <button class="platform-toggle active" data-platform="instagram">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg>
+          Instagram (1080×1080)
+        </button>
+        <button class="platform-toggle active" data-platform="linkedin">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+          LinkedIn (1200×627)
+        </button>
+      </div>
+
+      <!-- ── Projects Grid ── -->
+      <div class="projects-grid grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6" id="projects-grid">
+        <div class="col-span-full text-center py-12 text-gray-600 text-sm" id="loading-projects">
+          <div class="animate-spin w-6 h-6 border-2 border-[var(--green)] border-t-transparent rounded-full mx-auto mb-3"></div>
+          Loading projects...
+        </div>
+      </div>
+
+      <!-- ── Actions ── -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 border-t border-white/5">
+        <div class="flex items-center gap-3">
+          <button class="btn-ghost text-xs" id="select-all-btn">Select All</button>
+          <button class="btn-ghost text-xs" id="deselect-all-btn">Deselect All</button>
+          <span class="text-xs text-gray-600 ml-2" id="selection-count">0 selected</span>
+        </div>
+        <button class="btn-primary flex items-center gap-2" id="generate-btn" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span id="generate-btn-text">Generate Graphics</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Results ── -->
+    <div class="glass-card p-6 sm:p-8" id="results-section" style="display:none">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="font-bold text-lg">Generated Content</h3>
+        <span class="text-xs text-gray-500" id="results-count"></span>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" id="results-grid"></div>
+    </div>
+  </main>
+
+  <script>
+    let projects = [];
+    let selectedProjects = new Set();
+    let activePlatforms = new Set(['instagram', 'linkedin']);
+    let activeMethod = 'svg';
+    let canvaConnected = false;
+
+    const $ = id => document.getElementById(id);
+    let toastTimer;
+    function showToast(msg, type = 'success') {
+      const el = $('toast');
+      el.textContent = msg;
+      el.className = 'toast' + (type === 'error' ? ' error' : '');
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 4000);
+    }
+
+    // ── Load ──
+    async function loadStatus() {
+      try {
+        const res = await fetch('/api/canva/status');
+        const data = await res.json();
+        canvaConnected = data.connected;
+        projects = data.projects || [];
+
+        const connStatus = $('canva-conn-status');
+        const connText = $('conn-text');
+        if (data.clientConfigured) {
+          connStatus.classList.remove('hidden');
+          if (canvaConnected) {
+            connText.textContent = 'Connected';
+            connText.style.color = 'var(--green)';
+            connStatus.querySelector('span:first-child').style.background = 'var(--green)';
+          } else {
+            connText.textContent = 'Connect';
+            connText.style.color = '#fbbf24';
+            connStatus.querySelector('span:first-child').style.background = '#fbbf24';
+            connText.style.cursor = 'pointer';
+            connText.onclick = connectCanva;
+          }
+        }
+        renderProjects();
+        $('loading-projects').style.display = 'none';
+      } catch (err) {
+        $('loading-projects').innerHTML = '<span class="text-red-400">Failed to load. Is the worker running in dev?</span>';
+      }
+    }
+
+    function renderProjects() {
+      const grid = $('projects-grid');
+      if (!projects.length) { grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-600 text-sm">No projects found.</div>'; return; }
+      grid.innerHTML = projects.map(p => `
+        <div class="project-card" data-id="${p.id}">
+          <img src="${p.screenshot}" alt="${p.name}" loading="lazy" />
+          <div class="p-4">
+            <h4 class="font-semibold text-sm mb-1">${p.name}</h4>
+            <div class="flex flex-wrap gap-1.5 mb-2"><span class="badge bg-[var(--green)]/10 text-[var(--green)]">${p.category}</span></div>
+            <div class="flex flex-wrap gap-1">${p.tech.map(t => `<span class="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-gray-500">${t}</span>`).join('')}</div>
+          </div>
+          <div class="px-4 pb-4 flex items-center gap-2">
+            <div class="w-4 h-4 rounded border-2 border-white/10 flex items-center justify-center transition project-check"></div>
+            <span class="text-[11px] text-gray-600">Select</span>
+          </div>
+        </div>
+      `).join('');
+      grid.querySelectorAll('.project-card').forEach(card => card.addEventListener('click', () => toggleProject(card.dataset.id)));
+      updateSelection();
+    }
+
+    function toggleProject(id) { selectedProjects.has(id) ? selectedProjects.delete(id) : selectedProjects.add(id); updateSelection(); }
+
+    function updateSelection() {
+      document.querySelectorAll('.project-card').forEach(card => {
+        const id = card.dataset.id;
+        const sel = selectedProjects.has(id);
+        card.classList.toggle('selected', sel);
+        const check = card.querySelector('.project-check');
+        if (sel) { check.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="4"><polyline points="20 6 9 17 4 12"/></svg>'; check.style.borderColor = 'var(--green)'; check.style.background = 'rgba(132,204,22,0.15)'; }
+        else { check.innerHTML = ''; check.style.borderColor = 'rgba(255,255,255,0.1)'; check.style.background = 'transparent'; }
+      });
+      $('selection-count').textContent = `${selectedProjects.size} selected`;
+      $('generate-btn').disabled = selectedProjects.size === 0 || activePlatforms.size === 0;
+    }
+
+    document.querySelectorAll('.platform-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = btn.dataset.platform;
+        if (activePlatforms.has(p) && activePlatforms.size > 1) { activePlatforms.delete(p); btn.classList.remove('active'); }
+        else if (!activePlatforms.has(p)) { activePlatforms.add(p); btn.classList.add('active'); }
+        updateSelection();
+      });
+    });
+
+    document.querySelectorAll('.method-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.method-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        activeMethod = tab.dataset.method;
+        const info = $('method-info');
+        if (activeMethod === 'svg') {
+          info.innerHTML = '<span class="text-[var(--green)] font-semibold">Instant SVG</span> — Generates a styled SVG graphic instantly. No account needed, no API keys. Download and use directly.';
+          $('generate-btn-text').textContent = 'Generate Graphics';
+        } else {
+          info.innerHTML = '<span class="text-[var(--green)] font-semibold">Canva Design</span> — Creates a design in Canva with your screenshot embedded. Open in Canva to add text and branding, then export.';
+          $('generate-btn-text').textContent = canvaConnected ? 'Create in Canva' : 'Connect Canva First';
+        }
+        $('results-section').style.display = 'none';
+      });
+    });
+
+    $('select-all-btn').addEventListener('click', () => { projects.forEach(p => selectedProjects.add(p.id)); updateSelection(); });
+    $('deselect-all-btn').addEventListener('click', () => { selectedProjects.clear(); updateSelection(); });
+
+    async function connectCanva() {
+      try {
+        const res = await fetch('/api/canva/oauth/initiate', { method: 'POST' });
+        const data = await res.json();
+        if (data.authUrl) window.location.href = data.authUrl;
+        else showToast('Failed to get auth URL', 'error');
+      } catch { showToast('Connection error', 'error'); }
+    }
+
+    // ── Generate ──
+    $('generate-btn').addEventListener('click', async () => {
+      if (selectedProjects.size === 0 || activePlatforms.size === 0) return;
+
+      if (activeMethod === 'canva' && !canvaConnected) {
+        await connectCanva();
+        return;
+      }
+
+      const btn = $('generate-btn');
+      const origHTML = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<div class="animate-spin w-4 h-4 border-2 border-black border-t-transparent rounded-full inline-block mr-2"></div> Generating...';
+
+      try {
+        if (activeMethod === 'svg') {
+          // Direct SVG download per project+platform
+          const entries = [];
+          for (const pid of selectedProjects) {
+            for (const plat of activePlatforms) {
+              entries.push({ projectId: pid, platform: plat });
+            }
+          }
+
+          const results = [];
+          for (const entry of entries) {
+            try {
+              const res = await fetch('/api/svg/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(entry)
+              });
+              const svg = await res.text();
+              const project = projects.find(p => p.id === entry.projectId);
+              results.push({ ...entry, projectName: project?.name, svg });
+            } catch (err) {
+              results.push({ ...entry, error: err.message });
+            }
+          }
+          renderSVGResults(results);
+          showToast(`Generated ${results.filter(r => r.svg).length} graphics`);
+        } else {
+          const res = await fetch('/api/canva/bulk-generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              projectIds: Array.from(selectedProjects),
+              platforms: Array.from(activePlatforms)
+            })
+          });
+          const data = await res.json();
+          if (!res.ok) { showToast(data.error || 'Generation failed', 'error'); return; }
+          renderCanvaResults(data.results || []);
+          showToast(`Created ${data.results.filter(r => r.success).length} Canva designs`);
+        }
+
+        $('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (err) { showToast('Generation failed', 'error'); console.error(err); }
+      finally { btn.disabled = false; btn.innerHTML = origHTML; }
+    });
+
+    // ── Render SVG Results ──
+    function renderSVGResults(results) {
+      const section = $('results-section');
+      const grid = $('results-grid');
+      const count = $('results-count');
+      section.style.display = '';
+      count.textContent = `${results.length} graphic${results.length !== 1 ? 's' : ''}`;
+
+      grid.innerHTML = results.map(r => {
+        if (r.error) return `<div class="result-card p-4 text-gray-500 text-sm">${r.projectName || r.projectId}: ${r.error}</div>`;
+        const name = `${r.projectId}-${r.platform}`.replace(/\//g, '-');
+        const platformName = r.platform === 'linkedin' ? 'LinkedIn' : 'Instagram';
+        return `
+          <div class="result-card">
+            <div class="p-3 border-b border-white/5 flex items-center justify-between">
+              <span class="text-xs font-semibold uppercase tracking-wider">${platformName}</span>
+              <span class="text-[10px] text-gray-500">${r.projectName || r.projectId}</span>
+            </div>
+            <div class="p-3">
+              <img src="data:image/svg+xml,${encodeURIComponent(r.svg)}" alt="${r.projectName}" class="svg-preview" />
+              <div class="flex gap-2 mt-3">
+                <a href="data:image/svg+xml,${encodeURIComponent(r.svg)}" download="${name}.svg" class="btn-primary text-xs flex items-center justify-center gap-1.5 w-full py-2">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Download SVG
+                </a>
+                <button onclick="copySVG(this)" data-svg="${escAttr(r.svg)}" class="btn-secondary text-xs py-2 w-full">
+                  Copy SVG
+                </button>
+              </div>
+              <p class="text-[10px] text-gray-600 mt-2 text-center">Open SVG in browser → screenshot or Print to save as PNG</p>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function escAttr(s) { return s.replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+    window.copySVG = function(btn) {
+      const svg = btn.dataset.svg;
+      navigator.clipboard.writeText(svg).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = orig, 2000);
+      });
+    };
+
+    // ── Render Canva Results ──
+    function renderCanvaResults(results) {
+      const section = $('results-section');
+      const grid = $('results-grid');
+      const count = $('results-count');
+      const successful = results.filter(r => r.success);
+      section.style.display = '';
+      count.textContent = `${successful.length} design${successful.length !== 1 ? 's' : ''}`;
+
+      if (successful.length === 0) {
+        grid.innerHTML = `<div class="col-span-full text-center py-8 text-gray-500 text-sm">All failed. Make sure your Canva account is active.</div>`;
+        return;
+      }
+
+      grid.innerHTML = successful.map(r => {
+        const project = projects.find(p => p.id === r.projectId);
+        const platformName = r.platform === 'linkedin' ? 'LinkedIn' : 'Instagram';
+        return `
+          <div class="result-card">
+            <div class="p-3 border-b border-white/5 flex items-center justify-between">
+              <span class="text-xs font-semibold uppercase tracking-wider">${platformName}</span>
+              <span class="text-[10px] text-gray-500">${project?.name || r.projectId}</span>
+            </div>
+            <div class="p-3">
+              ${r.design?.thumbnail ? `<img src="${r.design.thumbnail}" alt="" class="w-full rounded-lg mb-3 border border-white/5" />` : `<div class="w-full aspect-square rounded-lg bg-gray-800 flex items-center justify-center text-gray-600 text-xs mb-3">Preview N/A</div>`}
+              <div class="flex flex-col gap-2">
+                ${r.design?.editUrl ? `<a href="${r.design.editUrl}" target="_blank" class="btn-ghost text-xs flex items-center justify-center gap-1.5 w-full py-2"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> Edit in Canva</a>` : ''}
+                ${r.design?.exportUrl ? `<a href="${r.design.exportUrl}" target="_blank" class="btn-primary text-xs flex items-center justify-center gap-1.5 w-full py-2"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download PNG</a>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      loadStatus();
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('connected') === 'true') {
+        showToast('Connected to Canva!');
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    });
+  </script>
+</body>
+</html>

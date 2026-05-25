@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://greenfieldcreatives.netlify.app/sitemap.xml
+Sitemap: https://greenfieldcreatives.pages.dev/sitemap.xml

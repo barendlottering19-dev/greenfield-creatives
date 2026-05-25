@@ -27,9 +27,22 @@ function json(data, status = 200) {
   });
 }
 
-function getAccessToken(env) {
+function getAccessToken(env, request) {
+  // Check Authorization header first (client-side token storage)
+  if (request) {
+    const auth = request.headers.get('Authorization') || '';
+    const match = auth.match(/^Bearer\s+(.+)$/i);
+    if (match) return match[1];
+  }
   if (env.CANVA_KV) return env.CANVA_KV.get('canva_access_token', { type: 'text' });
   return env.CANVA_MANUAL_TOKEN || null;
+}
+
+const CANVA_TOKEN_URL = 'https://api.canva.com/rest/v1/oauth/token';
+const CANVA_AUTH_URL = 'https://www.canva.com/api/oauth/authorize';
+
+function basicAuth(env) {
+  return btoa(`${env.CANVA_CLIENT_ID}:${env.CANVA_CLIENT_SECRET}`);
 }
 
 async function refreshAccessToken(env) {
@@ -38,13 +51,14 @@ async function refreshAccessToken(env) {
   if (!refresh) return null;
   const body = new URLSearchParams({
     grant_type: 'refresh_token',
-    refresh_token: refresh,
-    client_id: env.CANVA_CLIENT_ID,
-    client_secret: env.CANVA_CLIENT_SECRET
+    refresh_token: refresh
   });
-  const resp = await fetch('https://www.canva.com/api/oauth/token', {
+  const resp = await fetch(CANVA_TOKEN_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': `Basic ${basicAuth(env)}`
+    },
     body: body.toString()
   });
   if (!resp.ok) return null;
@@ -56,8 +70,8 @@ async function refreshAccessToken(env) {
   return tokens.access_token;
 }
 
-async function ensureToken(env) {
-  let token = await getAccessToken(env);
+async function ensureToken(env, request) {
+  let token = await getAccessToken(env, request);
   if (token) return token;
   return await refreshAccessToken(env);
 }
@@ -205,66 +219,81 @@ async function handleCanvaOAuthInitiate(request, env) {
   const stateObj = { v: verifier, ts: Date.now() };
   const state = btoa(JSON.stringify(stateObj));
 
-  const authUrl = `https://www.canva.com/api/oauth/authorize?${new URLSearchParams({
+  const authUrl = `${CANVA_AUTH_URL}?${new URLSearchParams({
     client_id: env.CANVA_CLIENT_ID,
     redirect_uri: redirectUri,
     response_type: 'code',
     code_challenge: challenge,
-    code_challenge_method: 's256',
+    code_challenge_method: 'S256',
     state,
     scope: 'design:content:write design:meta:read asset:read asset:write profile:read'
   })}`;
   return json({ authUrl });
 }
 
+function htmlPage(title, body, error) {
+  return new Response(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} - GreenField Creatives</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#050a08;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px}.card{background:#0d1a13;border:1px solid rgba(132,204,22,0.2);border-radius:16px;padding:40px;max-width:480px;width:100%;text-align:center}h1{color:#84cc16;font-size:24px;margin:0 0 8px}p{color:#9ca3af;line-height:1.6;margin:0 0 8px}.detail{color:#6b7280;font-size:13px;word-break:break-word;background:#050a08;padding:12px;border-radius:8px;margin-top:16px;text-align:left;max-height:200px;overflow:auto}.btn{display:inline-block;margin-top:24px;padding:12px 24px;background:#84cc16;color:#050a08;text-decoration:none;border-radius:8px;font-weight:600}.error{color:#ef4444}${error ? '.error-icon{font-size:48px;margin-bottom:16px}' : '.success-icon{font-size:48px;margin-bottom:16px}'}</style></head><body><div class="card">${error ? '<div class="error-icon">&#10060;</div>' : '<div class="success-icon">&#10003;</div>'}${error ? `<h1 class="error">Connection Failed</h1><p>${body}</p>` : `<h1>Connected!</h1><p>${body}</p>`}${error ? `<p class="detail">${error}</p>` : ''}<a href="/content-studio" class="btn">Back to Content Studio</a></div></body></html>`, {
+    headers: { 'Content-Type': 'text/html;charset=utf-8' },
+    status: error ? 400 : 200
+  });
+}
+
 async function handleCanvaOAuthCallback(request, env) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
-  if (!code) return json({ error: 'Missing code' }, 400);
+  if (!code) return htmlPage('Error', 'Missing authorization code from Canva.', 'No code parameter received.');
 
-  // Extract code_verifier from state
   let verifier = '';
+  let stateError = '';
   if (state) {
     try {
       const stateObj = JSON.parse(atob(state));
       verifier = stateObj.v || '';
-    } catch {}
+      if (!verifier) stateError = 'No code verifier found in state.';
+    } catch {
+      stateError = 'Failed to parse state parameter.';
+    }
+  } else {
+    stateError = 'No state parameter received (CSRF protection).';
   }
 
   const redirectUri = url.origin + '/api/canva/oauth/callback';
-  const body = new URLSearchParams({
-    grant_type: 'authorization_code',
-    code,
-    client_id: env.CANVA_CLIENT_ID,
-    client_secret: env.CANVA_CLIENT_SECRET,
-    redirect_uri: redirectUri,
-    code_verifier: verifier
-  });
+  // Manually construct the body to ensure exact encoding
+  const body = `grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(redirectUri)}&code_verifier=${encodeURIComponent(verifier)}`;
 
-  const resp = await fetch('https://www.canva.com/api/oauth/token', {
+  const resp = await fetch(CANVA_TOKEN_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString()
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': `Basic ${basicAuth(env)}`
+    },
+    body
   });
 
   if (!resp.ok) {
     const errText = await resp.text();
-    return json({ error: 'Token exchange failed', detail: errText }, 400);
+    const detail = errText.length > 500 ? errText.substring(0, 500) + '...' : errText;
+    const msg = stateError || 'Could not exchange authorization code for access token.';
+    return htmlPage('Error', msg, detail);
   }
 
   const tokens = await resp.json();
+
+  // Store in KV if available
   if (env.CANVA_KV) {
     await env.CANVA_KV.put('canva_access_token', tokens.access_token, { expirationTtl: tokens.expires_in || 3600 });
     if (tokens.refresh_token) await env.CANVA_KV.put('canva_refresh_token', tokens.refresh_token);
   }
 
-  const adminUrl = url.origin + '/content-studio?connected=true';
-  return Response.redirect(adminUrl, 302);
+  // Also pass token to client via URL hash for sessionStorage
+  const tokenHash = `#access_token=${encodeURIComponent(tokens.access_token)}${tokens.refresh_token ? '&refresh_token=' + encodeURIComponent(tokens.refresh_token) : ''}`;
+  const adminUrl = `/content-studio${tokenHash}`;
+  return Response.redirect(new URL(adminUrl, url.origin), 302);
 }
 
 async function handleCanvaStatus(request, env) {
-  const token = await ensureToken(env);
+  const token = await ensureToken(env, request);
   const connected = !!token;
   const clientConfigured = !!(env.CANVA_CLIENT_ID && env.CANVA_CLIENT_SECRET);
 
@@ -276,7 +305,7 @@ async function handleCanvaStatus(request, env) {
 }
 
 async function handleGenerateCanva(request, env) {
-  const token = await ensureToken(env);
+  const token = await ensureToken(env, request);
   if (!token) return json({ error: 'Canva not connected' }, 401);
 
   const body = await request.json();
@@ -369,7 +398,7 @@ async function handleBulkGenerate(request, env) {
   }
 
   // Canva method
-  const token = await ensureToken(env);
+  const token = await ensureToken(env, request);
   if (!token) return json({ error: 'Canva not connected' }, 401);
 
   const results = [];
@@ -378,7 +407,7 @@ async function handleBulkGenerate(request, env) {
       try {
         const req = new Request(request.url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': request.headers.get('Authorization') || '' },
           body: JSON.stringify({ projectId, platform })
         });
         const res = await handleGenerateCanva(req, env);
@@ -444,6 +473,17 @@ export default {
     if (path === '/api/canva/status' && request.method === 'GET') return handleCanvaStatus(request, env);
     if (path === '/api/canva/generate' && request.method === 'POST') return handleGenerateCanva(request, env);
     if (path === '/api/canva/bulk-generate' && request.method === 'POST') return handleBulkGenerate(request, env);
+
+    // ── PKCE Debug ──
+    if (path === '/api/debug/pkce') {
+      const testV = 'test-verifier-abc123';
+      const enc = new TextEncoder().encode(testV);
+      const hash = await crypto.subtle.digest('SHA-256', enc);
+      const hashArr = Array.from(new Uint8Array(hash));
+      const b64url = btoa(String.fromCharCode(...new Uint8Array(hash)))
+        .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+      return json({ testV, hashHex: hashArr.map(b => b.toString(16).padStart(2,'0')).join(''), b64url });
+    }
 
     // ── SVG Generation (fully automated, no Canva needed) ──
     if (path === '/api/svg/generate' && request.method === 'POST') return handleGenerateSVG(request);

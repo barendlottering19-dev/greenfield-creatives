@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Content Studio — GreenField Creatives</title>
+  <meta name="description" content="GreenField Creatives Content Studio — Generate social media graphics for your web projects. Download SVG or create Canva designs for Instagram and LinkedIn.">
+  <link rel="canonical" href="https://greenfieldcreatives.netlify.app/content-studio.html">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&display=swap" rel="stylesheet" />
@@ -147,7 +149,7 @@
     // ── Load ──
     async function loadStatus() {
       try {
-        const res = await fetch('/api/canva/status');
+        const res = await fetch('/api/canva/status', { headers: authHeaders() });
         const data = await res.json();
         canvaConnected = data.connected;
         projects = data.projects || [];
@@ -293,7 +295,7 @@
         } else {
           const res = await fetch('/api/canva/bulk-generate', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
             body: JSON.stringify({
               projectIds: Array.from(selectedProjects),
               platforms: Array.from(activePlatforms)
@@ -390,14 +392,33 @@
       }).join('');
     }
 
+    function getToken() {
+      return sessionStorage.getItem('canva_access_token');
+    }
+
+    function authHeaders() {
+      const t = getToken();
+      return t ? { 'Authorization': `Bearer ${t}` } : {};
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
-      loadStatus();
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('connected') === 'true') {
-        showToast('Connected to Canva!');
-        window.history.replaceState({}, '', window.location.pathname);
+
+      // Check URL hash for tokens from OAuth callback
+      const hash = window.location.hash;
+      if (hash) {
+        const hp = new URLSearchParams(hash.replace(/^#/, ''));
+        const at = hp.get('access_token');
+        if (at) {
+          sessionStorage.setItem('canva_access_token', at);
+          const rt = hp.get('refresh_token');
+          if (rt) sessionStorage.setItem('canva_refresh_token', rt);
+          showToast('Connected to Canva!');
+          window.history.replaceState({}, '', window.location.pathname);
+        }
       }
+
+      loadStatus();
     });
   </script>
 </body>

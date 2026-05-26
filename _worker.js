@@ -421,11 +421,61 @@ async function handleBulkGenerate(request, env) {
   return json({ results });
 }
 
+function stripHtml(s) {
+  return String(s).replace(/<[^>]*>/g, '').replace(/[<>]/g, '');
+}
+
+const FIELD_LIMITS = {
+  name: { max: 100 },
+  email: { max: 254 },
+  phone: { max: 30 },
+  ref: { max: 30 },
+  subject: { max: 200 },
+  message: { max: 5000 }
+};
+
+const MAX_PAYLOAD_BYTES = 10000;
+
+function sanitize(str) {
+  return stripHtml(String(str)).trim().replace(/\s+/g, ' ');
+}
+
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 async function handleContactForm(request, env) {
   try {
-    const data = await request.json();
-    const { name, email, phone, ref, subject, message } = data;
+    const raw = await request.text();
+    if (new TextEncoder().encode(raw).length > MAX_PAYLOAD_BYTES) {
+      return json({ error: 'Payload too large' }, 413);
+    }
+
+    let data;
+    try { data = JSON.parse(raw); } catch {
+      return json({ error: 'Invalid JSON' }, 400);
+    }
+
+    if (typeof data !== 'object' || !data) return json({ error: 'Invalid payload' }, 400);
+
+    const name = sanitize(data.name || '');
+    const email = sanitize(data.email || '');
+    const phone = sanitize(data.phone || '');
+    const ref = sanitize(data.ref || '');
+    const subject = sanitize(data.subject || '');
+    const message = sanitize(data.message || '');
+
     if (!name || !email || !message) return json({ error: 'Missing required fields' }, 400);
+    if (!validateEmail(email)) return json({ error: 'Invalid email format' }, 400);
+
+    if (name.length > FIELD_LIMITS.name.max ||
+        email.length > FIELD_LIMITS.email.max ||
+        phone.length > FIELD_LIMITS.phone.max ||
+        ref.length > FIELD_LIMITS.ref.max ||
+        subject.length > FIELD_LIMITS.subject.max ||
+        message.length > FIELD_LIMITS.message.max) {
+      return json({ error: 'One or more fields exceed maximum length' }, 400);
+    }
 
     const token = env.TELEGRAM_BOT_TOKEN;
     const chatId = env.TELEGRAM_CHAT_ID;

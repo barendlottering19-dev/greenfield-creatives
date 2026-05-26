@@ -1351,14 +1351,24 @@
             const formStatus = document.getElementById('form-status');
             const formSubmit = document.getElementById('form-submit');
 
+            function stripHtml(str) {
+                return String(str).replace(/<[^>]*>/g, '').replace(/[<>]/g, '');
+            }
+
+            function sanitize(str) {
+                return stripHtml(String(str)).trim().replace(/\s+/g, ' ');
+            }
+
             contactForm.addEventListener('submit', function(e) {
                 e.preventDefault();
 
-                const name = document.getElementById('form-name').value.trim();
-                const email = document.getElementById('form-email').value.trim();
-                const message = document.getElementById('form-message').value.trim();
+                const name = sanitize(document.getElementById('form-name').value);
+                const email = sanitize(document.getElementById('form-email').value);
+                const phone = sanitize(document.getElementById('form-phone').value);
+                const ref = sanitize(document.getElementById('form-ref').value);
+                const subject = sanitize(document.getElementById('form-subject').value);
+                const message = sanitize(document.getElementById('form-message').value);
 
-                // Basic validation
                 if (!name || !email || !message) {
                     formStatus.classList.remove('hidden', 'text-neon');
                     formStatus.classList.add('text-red-400');
@@ -1366,25 +1376,24 @@
                     return;
                 }
 
-                if (!email.includes('@') || !email.includes('.')) {
+                if (name.length > 100 || email.length > 254 || phone.length > 30 || ref.length > 30 || subject.length > 200 || message.length > 5000) {
+                    formStatus.classList.remove('hidden', 'text-neon');
+                    formStatus.classList.add('text-red-400');
+                    formStatus.textContent = 'One or more fields exceed the maximum length.';
+                    return;
+                }
+
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
                     formStatus.classList.remove('hidden', 'text-neon');
                     formStatus.classList.add('text-red-400');
                     formStatus.textContent = 'Please enter a valid email address.';
                     return;
                 }
 
-                // Submit to Netlify Forms
                 formSubmit.disabled = true;
                 formSubmit.innerHTML = '<span>Sending...</span>';
 
-                const payload = {
-                    name: document.getElementById('form-name').value.trim(),
-                    email: document.getElementById('form-email').value.trim(),
-                    phone: document.getElementById('form-phone').value.trim(),
-                    ref: document.getElementById('form-ref').value.trim(),
-                    subject: document.getElementById('form-subject').value.trim(),
-                    message: document.getElementById('form-message').value.trim()
-                };
+                const payload = { name, email, phone, ref, subject, message };
 
                 fetch('/contact', {
                     method: 'POST',

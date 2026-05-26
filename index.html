@@ -1378,7 +1378,8 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
-                }).then(function() {
+                }).then(function(resp) {
+                    if (!resp.ok) throw new Error('Server error');
                     formStatus.classList.remove('hidden', 'text-red-400');
                     formStatus.classList.add('text-neon');
                     formStatus.textContent = 'Thanks! We\'ll be in touch within 24 hours.';
@@ -1387,7 +1388,6 @@
                     formSubmit.innerHTML = '<span>Send Message</span> <i data-lucide="send" class="w-4 h-4"></i>';
                     lucide.createIcons();
 
-                    // Hide status after 5 seconds
                     setTimeout(function() {
                         formStatus.classList.add('hidden');
                     }, 5000);

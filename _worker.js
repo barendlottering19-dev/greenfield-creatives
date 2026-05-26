@@ -424,7 +424,7 @@ async function handleBulkGenerate(request, env) {
 async function handleContactForm(request, env) {
   try {
     const data = await request.json();
-    const { name, email, subject, message } = data;
+    const { name, email, phone, ref, subject, message } = data;
     if (!name || !email || !message) return json({ error: 'Missing required fields' }, 400);
 
     const token = env.TELEGRAM_BOT_TOKEN;
@@ -436,6 +436,8 @@ async function handleContactForm(request, env) {
       ``,
       `*Name:* ${name}`,
       `*Email:* ${email}`,
+      `*Phone:* ${phone || 'Not provided'}`,
+      `*Reference:* ${ref || 'Not provided'}`,
       `*Subject:* ${subject || 'Not provided'}`,
       `*Message:* ${message}`
     ].join('\n');

@@ -1030,6 +1030,16 @@
                                 <input type="email" id="form-email" name="email" placeholder="john@example.com" class="form-input" required>
                             </div>
                         </div>
+                        <div class="grid sm:grid-cols-2 gap-5">
+                            <div>
+                                <label for="form-phone" class="block text-xs text-gray-500 uppercase tracking-wider font-bold mb-2">Contact Number</label>
+                                <input type="tel" id="form-phone" name="phone" placeholder="+27 82 123 4567" class="form-input">
+                            </div>
+                            <div>
+                                <label for="form-ref" class="block text-xs text-gray-500 uppercase tracking-wider font-bold mb-2">Reference Code</label>
+                                <input type="text" id="form-ref" name="ref" placeholder="e.g. WEB-001" class="form-input">
+                            </div>
+                        </div>
                         <div>
                             <label for="form-subject" class="block text-xs text-gray-500 uppercase tracking-wider font-bold mb-2">Subject</label>
                             <input type="text" id="form-subject" name="subject" placeholder="Project Inquiry" class="form-input">
@@ -1370,6 +1380,8 @@
                 const payload = {
                     name: document.getElementById('form-name').value.trim(),
                     email: document.getElementById('form-email').value.trim(),
+                    phone: document.getElementById('form-phone').value.trim(),
+                    ref: document.getElementById('form-ref').value.trim(),
                     subject: document.getElementById('form-subject').value.trim(),
                     message: document.getElementById('form-message').value.trim()
                 };
